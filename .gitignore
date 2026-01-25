@@ -1,0 +1,17 @@
+# Ignore all files in the node_modules directory
+node_modules/
+
+# Ignore all log files
+*.log
+
+# Ignore temporary files
+*.tmp
+
+# Ignore JetBrains IDE files
+.idea/
+
+# Ignore environment variable files
+.env
+
+# Ignore venv directory for Python virtual environments
+venv/
