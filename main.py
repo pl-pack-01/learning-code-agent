@@ -4,6 +4,8 @@ from google import genai
 from google.genai import types
 from prompt import system_prompt
 
+from call_function import available_functions, call_function
+
 def main():
     load_dotenv()
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -13,6 +15,12 @@ def main():
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
     args = parser.parse_args()
 
+
+    config = types.GenerateContentConfig(
+        tools=[available_functions],
+        system_instruction=system_prompt,
+    )
+
     if api_key is None:
         raise ValueError("GEMINI_API_KEY not found in environment variables.")
     else:
@@ -21,14 +29,34 @@ def main():
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=messages,
-            config=types.GenerateContentConfig(system_instruction=system_prompt),
+            config=config,
         )
+
         if args.verbose:
             print("User prompt: ", args.user_prompt)
             print("Prompt tokens: ", response.usage_metadata.prompt_token_count)
             print("Response tokens: ", response.usage_metadata.candidates_token_count)
 
-        print(response.text)
+        # Check for function calls
+        if response.function_calls:
+            function_results = []
+            for function_call in response.function_calls:
+                function_call_result = call_function(function_call, verbose=args.verbose)
 
+                if not function_call_result.parts:
+                    raise Exception("Function call result has empty parts list")
+                if function_call_result.parts[0].function_response is None:
+                    raise Exception("Function call result has no function_response")
+                if function_call_result.parts[0].function_response.response is None:
+                    raise Exception("Function call result has no response")
+                
+                function_results.append(function_call_result.parts[0])
+                
+                if args.verbose:
+                    print(f"-> {function_call_result.parts[0].function_response.response}")
+        else:
+            print("Function call result: ", function_call_result)
+            print(response.text)
+        
 if __name__ == "__main__":
     main()

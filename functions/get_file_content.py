@@ -1,6 +1,23 @@
+import os, google
+from google.genai import types
+
+schema_get_file_content = types.FunctionDeclaration(
+    name="get_file_content",
+    description="Get the content of a specified file relative to the working directory, reading up to a defined number of characters",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="File path to get content from, relative to the working directory",
+            ),
+        },
+    ),
+)
+
 def get_file_content(working_directory, file_path):
     from config import characters_to_read
-    import os
+
     try:
         # Make working directory absolute
         working_directory_abs = os.path.abspath(working_directory)
