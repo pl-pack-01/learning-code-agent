@@ -11,7 +11,7 @@ available_functions = types.Tool(
 
 function_map = {
     "get_file_content": get_file_content,
-    "write_file": write_file,
+    "write_file_content": write_file,
     "get_files_info": get_files_info,
     "run_python_file": run_python_file,
 }

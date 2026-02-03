@@ -26,37 +26,49 @@ def main():
     else:
         client = genai.Client(api_key=api_key)
         messages = [types.Content(role="user", parts=[types.Part(text=args.user_prompt)])]
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=messages,
-            config=config,
-        )
+        for content in range(20):
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=messages,
+                config=config,
+            )
 
-        if args.verbose:
-            print("User prompt: ", args.user_prompt)
-            print("Prompt tokens: ", response.usage_metadata.prompt_token_count)
-            print("Response tokens: ", response.usage_metadata.candidates_token_count)
+            # Add candidates to messages for next iteration
+            if response.candidates:
+                for candidate in response.candidates:
+                    messages.append(candidate.content)            
 
-        # Check for function calls
-        if response.function_calls:
-            function_results = []
-            for function_call in response.function_calls:
-                function_call_result = call_function(function_call, verbose=args.verbose)
+            if args.verbose:
+                print("User prompt: ", args.user_prompt)
+                print("Prompt tokens: ", response.usage_metadata.prompt_token_count)
+                print("Response tokens: ", response.usage_metadata.candidates_token_count)
 
-                if not function_call_result.parts:
-                    raise Exception("Function call result has empty parts list")
-                if function_call_result.parts[0].function_response is None:
-                    raise Exception("Function call result has no function_response")
-                if function_call_result.parts[0].function_response.response is None:
-                    raise Exception("Function call result has no response")
-                
-                function_results.append(function_call_result.parts[0])
-                
-                if args.verbose:
-                    print(f"-> {function_call_result.parts[0].function_response.response}")
+            # Check for function calls
+            if response.function_calls:
+                function_results = []
+                for function_call in response.function_calls:
+                    function_call_result = call_function(function_call, verbose=args.verbose)
+
+                    if not function_call_result.parts:
+                        raise Exception("Function call result has empty parts list")
+                    if function_call_result.parts[0].function_response is None:
+                        raise Exception("Function call result has no function_response")
+                    if function_call_result.parts[0].function_response.response is None:
+                        raise Exception("Function call result has no response")
+                    
+                    function_results.append(function_call_result.parts[0])
+                    
+                    if args.verbose:
+                        print(f"-> {function_call_result.parts[0].function_response.response}")
+
+                messages.append(types.Content(role="user", parts=function_results))
+            else:
+                print("Function call result: ", function_call_result)
+                print(response.text)
+                break
         else:
-            print("Function call result: ", function_call_result)
-            print(response.text)
-        
+            print("Max iterations reached without final response.")
+            exit(1)
+
 if __name__ == "__main__":
     main()
