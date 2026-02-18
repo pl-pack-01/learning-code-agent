@@ -1,2 +1,2 @@
 # learning-code-agent
-Boot.dev course on building an AI agent.
+Building a code agent as part of a training course I'm taking.
