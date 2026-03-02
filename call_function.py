@@ -204,3 +204,72 @@ def call_function_openai(tool_call, verbose=False):
         return json.dumps({"result": result})
     except Exception as e:
         return json.dumps({"error": str(e)})
+
+
+# ============== CLAUDE ==============
+available_functions_claude = [
+    {
+        "name": "get_files_info",
+        "description": "Lists files in a specified directory",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "directory": {"type": "string", "description": "Directory path to list files from"}
+            }
+        }
+    },
+    {
+        "name": "get_file_content",
+        "description": "Reads and returns the content of a file",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "file_path": {"type": "string", "description": "Path to the file to read"}
+            },
+            "required": ["file_path"]
+        }
+    },
+    {
+        "name": "write_file_content",
+        "description": "Writes content to a file",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "file_path": {"type": "string", "description": "Path to the file"},
+                "content": {"type": "string", "description": "Content to write"}
+            },
+            "required": ["file_path", "content"]
+        }
+    },
+    {
+        "name": "run_python_file",
+        "description": "Runs a Python file and returns the output",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "file_path": {"type": "string", "description": "Path to the Python file"}
+            },
+            "required": ["file_path"]
+        }
+    }
+]
+
+def call_function_claude(tool_use_block, verbose=False):
+    function_name = tool_use_block.name
+
+    if verbose:
+        print(f"Calling function: {function_name}({tool_use_block.input})")
+    else:
+        print(f" - Calling function: {function_name}")
+
+    if function_name not in function_map:
+        return json.dumps({"error": f"Unknown function: {function_name}"})
+
+    try:
+        args = dict(tool_use_block.input) if tool_use_block.input else {}
+        args["working_directory"] = "."
+        result = function_map[function_name](**args)
+
+        return json.dumps({"result": result})
+    except Exception as e:
+        return json.dumps({"error": str(e)})

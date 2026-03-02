@@ -15,3 +15,10 @@ node_modules/
 
 # Ignore venv directory for Python virtual environments
 venv/
+.venv/
+.uv/
+
+# Ignore python bytecode files
+__pycache__/ 
+*.pyc
+*.pyo

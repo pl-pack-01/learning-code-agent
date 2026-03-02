@@ -2,11 +2,52 @@ import os, argparse, json
 from dotenv import load_dotenv
 from prompt import system_prompt
 from call_function import (
+    available_functions_claude,
     available_functions_gemini,
     available_functions_openai,
+    call_function_claude,
     call_function_gemini,
     call_function_openai,
 )
+
+def run_claude(client, messages, args):
+    for iteration in range(20):
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            system=system_prompt,
+            messages=messages,
+            tools=available_functions_claude,
+            max_tokens=8096,
+        )
+
+        if args.verbose:
+            print("Input tokens:", response.usage.input_tokens)
+            print("Output tokens:", response.usage.output_tokens)
+
+        messages.append({"role": "assistant", "content": response.content})
+
+        if response.stop_reason == "tool_use":
+            tool_results = []
+            for block in response.content:
+                if block.type == "tool_use":
+                    result = call_function_claude(block, verbose=args.verbose)
+                    if args.verbose:
+                        print(f"-> {result}")
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result,
+                    })
+            messages.append({"role": "user", "content": tool_results})
+        else:
+            for block in response.content:
+                if hasattr(block, "text"):
+                    print(block.text)
+            return
+
+    print("Max iterations reached without final response.")
+    exit(1)
+
 
 def run_gemini(client, messages, config, args):
     from google.genai import types
@@ -92,7 +133,7 @@ def main():
     parser = argparse.ArgumentParser(description="Chatbot")
     parser.add_argument("user_prompt", type=str, help="User prompt")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
-    parser.add_argument("--provider", type=str, default="gemini", choices=["gemini", "openai"], help="AI provider (gemini or openai)")
+    parser.add_argument("--provider", type=str, default="gemini", choices=["gemini", "openai", "claude"], help="AI provider (gemini, openai, or claude)")
     args = parser.parse_args()
 
     if args.verbose:
@@ -128,6 +169,17 @@ def main():
             {"role": "user", "content": args.user_prompt}
         ]
         run_openai(client, messages, args)
+
+    elif args.provider == "claude":
+        import anthropic
+
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if api_key is None:
+            raise ValueError("ANTHROPIC_API_KEY not found in environment variables.")
+
+        client = anthropic.Anthropic(api_key=api_key)
+        messages = [{"role": "user", "content": args.user_prompt}]
+        run_claude(client, messages, args)
 
 
 if __name__ == "__main__":
